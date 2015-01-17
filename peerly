@@ -1,0 +1,23 @@
+#!/usr/bin/python
+from peerlyApp.peerlyWS import *
+from socketio.server import SocketIOServer
+import sys
+
+from twisted.internet import reactor
+
+p2pPort = 8469
+webPort = 8080
+
+lastArg = ''
+for arg in sys.argv:
+  if lastArg == '-p':
+    p2pPort = int(arg)
+  if lastArg == '-w':
+    webPort = int(arg)
+  lastArg = arg
+
+
+if __name__ == '__main__':
+    print 'Listening on port %i' % webPort
+    SocketIOServer(('0.0.0.0', webPort), Application(p2pPort),resource="socket.io").serve_forever()
+

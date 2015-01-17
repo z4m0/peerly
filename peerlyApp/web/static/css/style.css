@@ -1,0 +1,66 @@
+.center_search {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -200px;   /* half of the height of the element */
+    margin-left: -256px; /* half of the width of the element*/
+    width: 512px;
+}
+.top_search {
+    position: absolute;
+    left: 50%;
+    margin-left: -256px; /* half of the width of the element*/
+    width: 512px;
+}
+.center_button {
+    height: 100%;
+    text-align: center;
+}
+
+.center_insert {
+    position: absolute;
+    left: 50%;
+    margin-left: -250px; /* half of the width of the element*/
+}
+
+.results-container {
+    padding-top: 30px;
+}
+
+
+.result {
+    margin-bottom: 15px; 
+}
+
+.url_text{
+    font-size: 75%;
+    color: #6E6E6E;
+}
+
+.keywords_text{
+    font-size: 75%;
+    color: #6E6E6E;
+}
+.long_button {
+    margin: 10px;
+    width:50%
+}
+
+.page1 {
+    display: none;
+}
+
+.page2 {
+    display: none;
+}
+.page3 {
+    display: none;
+}
+
+.float_left {
+  float: left;
+}
+
+.float_right {
+  float : right;
+}

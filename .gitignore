@@ -1,0 +1,11 @@
+*.pickle
+*.pid
+*.pyc
+build
+dist
+peerly.egg-info/
+docs/_build
+*~
+cache.pickle
+twistd.pid
+server.tac

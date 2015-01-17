@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link href="static/css/style.css" rel="stylesheet">
+    <script type="text/javascript" src="static/jquery-1.6.1.min.js"></script>
+    <script type="text/javascript" src="static/socket.io.js"></script>
+    <script>    
+
+WEB_SOCKET_SWF_LOCATION = "/static/WebSocketMain.swf";
+WEB_SOCKET_DEBUG = true;
+
+// socket.io specific code
+var socket = io.connect();
+
+$(window).bind("beforeunload", function() {
+    socket.disconnect();
+});
+
+socket.on('connect', function () {
+    console.log('Connected to local peer')
+});
+
+socket.on('reconnect', function () {
+   console.log('System', 'Reconnected to the server');
+});
+
+socket.on('reconnecting', function () {
+     console.log('System', 'Attempting to re-connect to the server');
+});
+
+socket.on('error', function (e) {
+    console.log('System', e ? e : 'A unknown error occurred');
+});
+
+socket.on('connecting to network',function(){
+  console.log('connecting to network')
+})
+
+socket.on('connected to network', function(){
+  console.log('connected to p2p network')
+  showPage(1)
+  socket.emit('my ip')
+})
+
+socket.on('your ip',function(ip){
+  console.log('my ip is',ip)
+  $('#ip-holder').empty()
+  $('#ip-holder').text(ip[0].toString().replace(',',':'))
+})
+
+var resCounter = 0
+var results = []
+socket.on('query result', function(response){
+  try{
+    //response = response.replace(/'/g,'"')
+    response = JSON.parse(response)
+  }catch(e){
+      console.log('Could not parse query result:',e)
+   }
+  console.log('query result', typeof response, response)
+  if(typeof response !== 'object' || response === null){
+    return
+  }
+  
+  for(r in response){
+    var res = response[r][1]
+    if(!res.score) res.score = getScore(res)
+    
+    res.digest = response[r][0]
+    res.id = 'result-'+resCounter
+    resCounter++
+    
+    console.log(res.title,res.score)
+    if(isNew(res)){
+      //Get the result position
+      var pos = getResultPosition(res)
+      results.splice(pos, 0, res)
+      //Render result
+      renderResult(res,pos)
+    }
+  }
+})
+
+//Function that computes the value to sort the results
+//TODO must improve this
+function getScore(res){
+  var searchKeywords = $('#search-input2').val().toLowerCase().split(' ')
+  var keywords = res.keywords.split(' ')
+  var count = 0
+  for(var i=0; i<keywords.length; ++i){
+    if(searchKeywords.indexOf(keywords[i]) !== -1){
+      count++
+    }
+  }
+  return count/searchKeywords.length
+}
+
+function isNew(res){
+  for(var i=0; i<results.length; ++i){
+     if(res.digest === results[i].digest){
+        return false
+     }
+  }
+  return true
+}
+
+function getResultPosition(res){
+    for(var i=0; i<results.length; ++i){
+      if(res.score > results[i].score){
+        return i
+      }
+    }
+    return results.length
+}
+
+function renderResult(res, pos){
+    if(res.url.indexOf("http://") !== 0){
+      res.url = 'http://'+res.url
+    }
+    var html = '<div class="result" id="'+res.id+'">'
+    +'<a target="_blank" href="'+res.url+'">'+res.title+'</a><br>'
+    +'<span class="url_text">'+res.url+'</span><br>'
+    +''+res.description+'<br>'
+    +'<span class="keywords_text">tags: '+res.keywords.split(' ').join()+'</span><br>'
+    +'</div>'
+    if(pos === 0)
+      $('.results-container').prepend(html)
+    else
+      $(html).insertAfter('#'+results[pos-1].id)
+}
+
+function showPage(page){
+  var numPages = 4
+  for(var i=0; i<numPages; ++i){
+    $(".page"+i).toggle(page === i)
+  }
+}
+
+// DOM manipulation
+$(function () {
+    $('#insert-link').click(function(){
+        showPage(2)
+    })
+    $('.main-page-link').click(function(){
+        showPage(1)
+    })
+    
+    $('.search-button').click(function(){
+        var query = $('#search-input1').val().toLowerCase()
+        if($('#search-input2').is(":visible")){
+          query = $('#search-input2').val().toLowerCase() 
+          $('#search-input1').val($('#search-input2').val())
+        }else{
+          $('#search-input2').val($('#search-input1').val())
+        }
+        $('.results-container').empty()
+        results = []
+        socket.emit('query',query)
+        showPage(3)
+    })
+
+    $('#insert-button').click(function(){
+        var entry = {}
+        entry.title = $('#title-input').val()
+        entry.url = $('#url-input').val()
+        entry.description = $('#description-input').val()
+        entry.keywords = $('#keywords-input').val().toLowerCase()
+        if(!entry.title){
+          alert('Must add a title')
+          return
+        }
+        if(!entry.url){
+          alert('Must add a url')
+          return
+        }
+        if(!entry.keywords){
+          alert('Must add tags')
+          return
+        }
+        console.log('Adding new entry to the network:',entry)
+        socket.emit('insert',entry)
+        alert('Inserted')
+        $(".page1").toggle(true)
+        $(".page2").toggle(false)
+        $(".page3").toggle(false) 
+    })    
+    
+    $('#connect-button').click(function(){
+        socket.emit('bootstrap',$('#connect-input').val())
+    })
+});
+    </script>
+  <title>Peerly - the p2p stuff indexer</title>
+  </head>
+<body>
+  <div class="header">
+    <div id="insert-link-container" class="page1 float_left">
+      <a href="#" id="insert-link">Insert new entry to the DB</a>
+    </div>
+    <div class="page2 float_left">
+      <a href="#" class="main-page-link">Back</a>
+    </div>
+    <div class="page3 float_left">
+      <a href="#" class="main-page-link">Back</a>
+    </div>
+    <div class="float_right">My IP: <strong id="ip-holder">(not connected)</strong></div>
+  </div>
+  <div  class="center_search page1 search-container"  >
+    <h1 style="text-align:center">Peerly</h1> 
+    <input type="search" size="50" id="search-input1" placeholder="Search"/><br/>
+    <div class="center_button"><button class="long_button search-button">Search</button></div>
+  </div>
+  <div id="insert-container" class="center_insert page2">
+    <h3>New entry</h3>
+    <label for="title" >Title:</label> <input name="title" id="title-input"><br>
+    <label for="url" >Url:</label> <input name="url" id="url-input"><br>
+    <label for="description" >Description:</label><br> <textarea rows="10" cols="60" name="description" id="description-input"></textarea><br>
+    <label for="keywords"  >Tags: <small>(Separated by spaces)</small> </label><input name="keywords" id="keywords-input"><br>
+     <div class="center_button"><button class="long_button" id="insert-button">Insert</button></div>
+  </div>
+
+  <div class="top_search page3 search-container"  >
+    <h1 style="text-align:center">Peerly</h1> 
+    <input type="search" size="40" id="search-input2" placeholder="Search"/>
+    <button class="search-button">Search</button>
+    <div class="results-container"></div>
+  </div>
+  
+  <div class="center_search page0">
+      Insert your friend's IP and port <input type="text" id="connect-input" placeholder="192.168.0.1:4567"/><br>
+      <div class="center_button"><button  class="long_button" id="connect-button">Connect to Peerly network</button></div><br/>
+  </div>
+</body>
+</html>
+
