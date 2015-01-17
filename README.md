@@ -1,4 +1,4 @@
-# P2P stuff indexer
+# Peerly
 Peerly is a P2P stuff indexer, that means that is a highly distributed database indexed by keywords (or tags). You can store something (up to 8KB) in the DB and retrieve later inserting some of the tags you used before.
 
 ##Installation
@@ -14,7 +14,8 @@ sudo python setup.py install
 
 In a console type:
 ```
-peerly
+cd /dir/where/you/have/peerly
+./peerly
 ```
 
 Open the browser and go to:
