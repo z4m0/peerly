@@ -55,7 +55,7 @@ socket.on('query result', function(response){
     //response = response.replace(/'/g,'"')
     response = JSON.parse(response)
   }catch(e){
-      console.log('Could not parse query result:',e)
+      //console.log('Could not parse query result:',e)
    }
   console.log('query result', typeof response, response)
   if(typeof response !== 'object' || response === null){

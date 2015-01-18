@@ -21,7 +21,7 @@ class P2PNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
         log.msg('starting bootstrap')
         (ip,port) = ipport.split(':')
         #server.bootstrap([("127.0.0.1", 8468)]).addCallback(P2PNamespace.sbootstrapDone, self)
-        self.request['kadServer'].bootstrap([(ip, int(port))]).addCallback(P2PNamespace.sbootstrapDone, self)
+        self.request['kadServer'].bootstrap([(ip, int(port))]).addCallback(self.bootstrapDone)
 
         self.emit('connecting to network')
 
@@ -29,7 +29,8 @@ class P2PNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
         self.disconnect(silent=True)
 
     def recv_message(self, message):
-        print "PING!!!", message
+        pass
+        #print "PING!!!", message
     
     def bootstrapDone(self,found):
         self.request['bootstraped'] = True
@@ -44,12 +45,12 @@ class P2PNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
            return
         num = min(len(keywords),16)
         for i in range(0,num):
-            self.request['kadServer'].get(keywords[i]).addCallback(P2PNamespace.squeryDone,self,message)
+            self.request['kadServer'].get(keywords[i]).addCallback(self.queryDone,message)
             
     def queryDone(self, result, query):
         if(result is None):
             result = 'null'
-        log.msg('query done '+result)
+        log.msg('query done '+str(result))
         self.emit('query result', result)
         
     def on_insert(self, m):
@@ -64,39 +65,19 @@ class P2PNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
         keywords = m.get('keywords').split(' ')
         num = min(len(keywords),16)
         for i in range(0,num):
-            self.request['kadServer'].set(keywords[i], json.dumps(m)).addCallback(P2PNamespace.sinsertDone,self)
+            self.request['kadServer'].set(keywords[i], json.dumps(m)).addCallback(self.insertDone)
             
     def insertDone(self,result):
-        log.msg('insert done '+str(result))
+        if result is None:
+          log.msg('insert error')
+        else:
+          log.msg('insert done '+str(result))
         self.emit('insert result', result)
      
     def on_my_ip(self):
         log.msg("asking my ip")
-        ip = self.request['kadServer'].inetVisibleIP().addCallback(P2PNamespace.smyIpDone,self)
+        ip = self.request['kadServer'].inetVisibleIP().addCallback(self.myIpDone)
 
     def myIpDone(self,ip):
         log.msg("my ip is %s" % (ip))
         self.emit('your ip', ip)
-        
-    @staticmethod
-    def smyIpDone(ip,obj):
-      if not (obj is None):
-          obj.myIpDone(ip)
-    @staticmethod  
-    def sbootstrapDone(found, obj):
-      #server.set("a key", "a value").addCallback(setDone, server)
-      log.msg('bootstrap done here')
-      if not (obj is None):
-          obj.bootstrapDone(found)
-    @staticmethod
-    def squeryDone(result,obj,query):
-      if(result is None):
-          log.msg('query done '+query+' not found')
-      else:
-          log.msg('query done '+query+'='+result)
-      if(not obj is None):
-          obj.queryDone(result,query)
-    @staticmethod
-    def sinsertDone(result,obj):
-       if(not obj is None):
-          obj.insertDone(result)
