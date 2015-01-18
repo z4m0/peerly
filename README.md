@@ -5,7 +5,7 @@ Peerly is a P2P stuff indexer, that means that is a highly distributed database 
 
 Install first [peerlyDB](https://github.com/z4m0/peerlyDB)
 
-Download, unzip and uncompress the project
+Download and unzip the project
 ```
 sudo python setup.py install
 ```
