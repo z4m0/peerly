@@ -8,8 +8,9 @@ from socketio.mixins import RoomsMixin, BroadcastMixin
 from twisted.internet import reactor
 from twisted.python import log
 from peerlyDB.network import Server
+from peerlyDB.utils import digest
 import sys, signal
-import json
+import json, base64
 
 
 class P2PNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
@@ -50,8 +51,8 @@ class P2PNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
     def queryDone(self, result, query):
         if(result is None):
             result = 'null'
-        log.msg('query done '+str(result))
-        self.emit('query result', result)
+        log.msg('query done %s for query %s' %( str(result), str(query)))
+        self.emit('query result', {"result": result, "query": query})
         
     def on_insert(self, m):
         if (self.request['kadServer'] is None):
@@ -62,6 +63,9 @@ class P2PNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
             log.msg('Not a dictionary or invalid stoping...')
             self.emit('insert result','Error: Invalid object')
             return
+        
+        m['commentsThread'] = base64.b64encode(digest(m))
+            
         keywords = m.get('keywords').split(' ')
         num = min(len(keywords),16)
         for i in range(0,num):
@@ -81,3 +85,14 @@ class P2PNamespace(BaseNamespace, RoomsMixin, BroadcastMixin):
     def myIpDone(self,ip):
         log.msg("my ip is %s" % (ip))
         self.emit('your ip', ip)
+        
+    def on_comment(self,comment):
+        log.msg("Sending comment %s" % (str(comment)))
+        self.request['kadServer'].set(comment['thread'], json.dumps(comment)).addCallback(self.commentDone)
+        
+    def commentDone(self,result):
+        if result is None:
+          log.msg('comment insert error')
+        else:
+          log.msg('comment done '+ str(result))
+        self.emit('comment result', result)

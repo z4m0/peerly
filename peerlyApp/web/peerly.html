@@ -9,6 +9,14 @@
 WEB_SOCKET_SWF_LOCATION = "/static/WebSocketMain.swf";
 WEB_SOCKET_DEBUG = true;
 
+var keyupEvent = function(keyCode,callback,options){
+  return function(e){
+    if(e && e.keyCode == keyCode){
+      callback(options)
+    }
+  }
+}
+
 // socket.io specific code
 var socket = io.connect();
 
@@ -51,6 +59,9 @@ socket.on('your ip',function(ip){
 var resCounter = 0
 var results = []
 socket.on('query result', function(response){
+  query = response.query
+  response = response.result
+
   try{
     //response = response.replace(/'/g,'"')
     response = JSON.parse(response)
@@ -62,6 +73,16 @@ socket.on('query result', function(response){
     return
   }
   
+
+  
+  if(query == $('#search-input1').val().toLowerCase()){
+    processResponse(query,response)
+  }else{
+    processComments(query, response)
+  }
+})
+
+function processResponse(query,response){
   for(r in response){
     var res = response[r][1]
     if(!res.score) res.score = getScore(res)
@@ -77,9 +98,22 @@ socket.on('query result', function(response){
       results.splice(pos, 0, res)
       //Render result
       renderResult(res,pos)
+      //ask for comments
+      if(res.commentsThread){
+        socket.emit('query',res.commentsThread)
+      }
     }
   }
-})
+}
+
+function processComments(thread, response){
+  console.log('reading comment',thread,response)  
+  for(var r in response){
+  console.log('c',response[r][1])
+    response[r][1].date = new Date(r*1000)
+    updateComments(response[r][1],thread)
+  }
+}
 
 //Function that computes the value to sort the results
 //TODO must improve this
@@ -113,6 +147,9 @@ function getResultPosition(res){
     return results.length
 }
 
+var commentsCounter = 0
+var commenter = {}
+
 function renderResult(res, pos){
     if(res.url.indexOf("http://") !== 0){
       res.url = 'http://'+res.url
@@ -122,11 +159,45 @@ function renderResult(res, pos){
     +'<span class="url_text">'+res.url+'</span><br>'
     +''+res.description+'<br>'
     +'<span class="keywords_text">tags: '+res.keywords.split(' ').join()+'</span><br>'
-    +'</div>'
+    if(res.commentsThread){
+      html += '<div id="comments-thread-'+commentsCounter+'">'
+              + '<a href="#" onClick="$(\'#comments-container-super-'+commentsCounter+'\').toggle()"><span  id="comments-num-'+commentsCounter+'">0</span> comments</a><br>'
+              +'<div id="comments-container-super-'+commentsCounter+'" style="display: none;"><div  class="comments-container" id="comments-container-'+commentsCounter+'"></div>'
+              + '<input id="comments-input-'+commentsCounter+'" cols="53" rows="1" placeholder="Write a comment">'
+              +'</div></div>'
+    }
+    html +='</div>'
     if(pos === 0)
       $('.results-container').prepend(html)
     else
       $(html).insertAfter('#'+results[pos-1].id)
+      
+   if(res.commentsThread){
+    console.log('listen to', '#comments-input-'+commentsCounter)
+    commenter[res.commentsThread] = {containerId : commentsCounter, numComments : 0}
+    $('#comments-input-'+commentsCounter).keyup(keyupEvent(13,sendComment,{thread:res.commentsThread, containerId : commentsCounter }))
+    ++commentsCounter
+   }
+}
+
+function updateComments(comment,threadId,visibility){
+  if(!visibility){
+    visibility = false
+  }
+  var containerId = commenter[threadId].containerId
+  var numComments = ++commenter[threadId].numComments
+  console.log('#comments-num-'+containerId, numComments)
+  $('#comments-num-'+containerId).text(numComments)
+  $('#comments-container-'+containerId).append('<div class="comment"><p>'+comment.comment+'</p><span>'+comment.date+'</span></div>')
+  $('#comments-container-super-'+containerId).toggle(visibility)
+}
+
+function sendComment(thread){
+    console.log('Sending comment',thread.thread,$('#comments-input-'+thread.containerId).val())
+
+    socket.emit('comment',{thread:thread.thread,comment:$('#comments-input-'+thread.containerId).val()})
+    updateComments({comment:$('#comments-input-'+thread.containerId).val(), date: new Date()},thread.thread,true)
+    $('#comments-input-'+thread.containerId).val('')
 }
 
 function showPage(page){
@@ -145,7 +216,7 @@ $(function () {
         showPage(1)
     })
     
-    $('.search-button').click(function(){
+    var searchF = function(){
         var query = $('#search-input1').val().toLowerCase()
         if($('#search-input2').is(":visible")){
           query = $('#search-input2').val().toLowerCase() 
@@ -157,7 +228,11 @@ $(function () {
         results = []
         socket.emit('query',query)
         showPage(3)
-    })
+    }
+    
+    $('.search-button').click(searchF)
+    $('#search-input1').keyup(keyupEvent(13,searchF))
+    $('#search-input2').keyup(keyupEvent(13,searchF));
 
     $('#insert-button').click(function(){
         var entry = {}
@@ -185,9 +260,12 @@ $(function () {
         $(".page3").toggle(false) 
     })    
     
-    $('#connect-button').click(function(){
+    var startBootstrap = function(){
         socket.emit('bootstrap',$('#connect-input').val())
-    })
+    }
+    
+    $('#connect-input').keyup(keyupEvent(13,startBootstrap))
+    $('#connect-button').click(startBootstrap)
 });
     </script>
   <title>Peerly - the p2p stuff indexer</title>

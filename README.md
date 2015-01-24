@@ -36,6 +36,13 @@ Just insert the search tags and press search!
 Peerly is based on Kademlia. Kademlia is a Distributed Hash Table (DHT) that means each peer has a piece of the DB. 
 Each pair tag, value is transalted to a hash and stored to some peers. If a peer disconnects from the network the entry won't disapear as it is stored to other peers. Each key can contain up to 50 values. That means if you put something indexed with the word "home" and somebody adds something else with the same tag your entry won't disappear. And both entries will appear as results in the search. But if 50 people insert something with the tag "home" your entry finally disapears. So, this DB tends to forget.
 
+##Features
+
+* Search by keywords (tags)
+* Create new entries
+* Get own IP:PORT to be able to invite new users
+* Comment the entries
+
 ##Contribute
 Please fork this repository and contribute!! With new ideas too!
 
@@ -48,8 +55,6 @@ TODO
 
 ##TODO
 This is a list of things in the roadmap. Don't know if I will implement all of them yet:
-
-* Allow the users comment. Each hash(value) can be the comments thread.
 
 * Voting system: Each user can vote up or vote down an entry. The most voted entries should remain more time. The user can see what the comunity things about this entry. The votes won't be stored in the same location as the value. This means that the kademlia protocol should be extended.
 
